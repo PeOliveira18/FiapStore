@@ -1,4 +1,4 @@
-# 🛒 Produto WebService SOAP — FIAP Store
+# Produto WebService SOAP — FIAP Store
 
 > **Disciplina:** Arquitetura SOA / Web Services  
 > **Professor:** Salatiel Luz Marinho  
