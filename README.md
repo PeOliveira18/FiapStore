@@ -1,7 +1,8 @@
 # Produto WebService SOAP — FIAP Store
 
 > **Disciplina:** Arquitetura SOA / Web Services  
-> **Professor:** Salatiel Luz Marinho  
+> **Professor:** Salatiel Luz Marinho
+> **Grupo: ** Pedro Oliveira (99943), Débora Ivanowski (555694), Diego Cabral (557817)
 > **Tecnologia:** Java 21 · JAX-WS · Maven · JAXB  
 
 ---
