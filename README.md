@@ -1,16 +1,39 @@
-#  Produto WebService SOAP — FIAP Store
+# 🛒 Produto WebService SOAP — FIAP Store
 
-> **Disciplina:** Arquitetura SOA / Web Services
-> Grupo: Pedro Oliveira (99943), Débora Ivanowski (555694), Diego Cabral (557817)
+> **Disciplina:** Arquitetura SOA / Web Services  
 > **Professor:** Salatiel Luz Marinho  
 > **Tecnologia:** Java 21 · JAX-WS · Maven · JAXB  
 
-##  Contexto de Implantação
-A **FIAP Store** é um é um sistema de gerenciamento de produtos que
-precisa expor seu catálogo via WebService SOAP para integração com sistemas
-parceiros que utilizam esse protocolo.
-```
-##  Estrutura do Projeto
+---
+
+## Contexto de Implantação
+
+A **FIAP Store** é um sistema de gerenciamento de produtos que precisa
+expor seu catálogo via WebService SOAP para integração com sistemas parceiros
+que utilizam esse protocolo. O SOAP foi escolhido por garantir um
+contrato forte via WSDL — qualquer sistema pode apontar para o WSDL
+e gerar um cliente automaticamente, sem depender de documentação manual.
+Alguns parceiros (Mercado Livre, Amazon) utilizam sistemas legados — muitos
+construídos há mais de 10 anos — que falam SOAP/XML como protocolo padrão de
+integração enterprise. A adoção de SOAP neste cenário é uma exigência
+de negócio, não uma escolha tecnológica livre.
+
+---
+
+## Problemas que este serviço resolve
+
+| Problema | Solução aplicada |
+|----------|-----------------|
+| Parceiros legados não falam REST/JSON | Protocolo SOAP universalmente suportado |
+| Sem contrato formal entre sistemas | WSDL gerado automaticamente pelo JAX-WS |
+| Inconsistência de tipos de dados | Tipagem estrita via XML Schema (XSD) no WSDL |
+| Dificuldade de integração B2B | Envelope SOAP padronizado (ISO/W3C) |
+| Risco de deletar dados críticos | Soft delete: campo `ativo` preserva histórico |
+| Validações dispersas no código | Validações centralizadas na camada Service |
+
+---
+
+## 🏗️ Estrutura do Projeto
 
 ```
 produto-webservice/                  ← Servidor (publica o serviço)
@@ -29,45 +52,46 @@ produto-webservice/                  ← Servidor (publica o serviço)
     │
     ├── service/
     │   └── ProdutoService.java      ← Operações SOAP expostas (@WebService)
-    |
-    ├── demoAplicattion              ← Publica o endpoint via 
+    │
+    └── demoApplication/             ← Publica o endpoint via Endpoint.publish()
 ```
 
 ---
 
-##  Dependências Maven
+## Dependências Maven
 
 ```xml
-<!-- JAX-WS: cria WebServices, gera WSDL, publica endpoints SOAP -->
 <dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webservices</artifactId>
-		</dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+<dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-webservices</artifactId>
+</dependency>
 
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-        <dependency>
-            <groupId>wsdl4j</groupId>
-            <artifactId>wsdl4j</artifactId>
-        </dependency>
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>com.sun.xml.ws</groupId>
-			<artifactId>jaxws-rt</artifactId>
-			<version>4.0.3</version>
-		</dependency>
+<dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-test</artifactId>
+	<scope>test</scope>
+</dependency>
+<dependency>
+	<groupId>wsdl4j</groupId>
+	<artifactId>wsdl4j</artifactId>
+</dependency>
+<dependency>
+	<groupId>org.projectlombok</groupId>
+	<artifactId>lombok</artifactId>
+	<optional>true</optional>
+</dependency>
+<dependency>
+	<groupId>com.sun.xml.ws</groupId>
+	<artifactId>jaxws-rt</artifactId>
+	<version>4.0.3</version>
+</dependency>
 ```
+
+---
 
 ## Operações disponíveis
 
@@ -83,7 +107,16 @@ produto-webservice/                  ← Servidor (publica o serviço)
 
 ---
 
-## 🌐 Acessando o WSDL
+## Como executar
+
+### 1. Servidor — publicar o serviço
+
+```
+mvn spring-boot:run
+```
+---
+
+## Acessando o WSDL
 
 Após iniciar o servidor, acesse no navegador:
 
@@ -99,7 +132,7 @@ O **WSDL** é o contrato do serviço. Ele define:
 
 ---
 
-## 🧪 Testando via Insomnia / Postman
+## Testando via Insomnia
 
 **Configuração:**
 - Método: `POST`
@@ -108,7 +141,7 @@ O **WSDL** é o contrato do serviço. Ele define:
 
 ### Listar todos os produtos
 
-```
+```xml
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
                   xmlns:ser="http://service.soap.fiap.com.br/">
     <soapenv:Header/>
@@ -202,3 +235,58 @@ O **WSDL** é o contrato do serviço. Ele define:
     </S:Body>
 </S:Envelope>
 ```
+---
+
+## Boas práticas aplicadas
+
+### 1. Separação de responsabilidades (Layered Architecture)
+Cada camada tem uma única responsabilidade:
+- **Model** → representa dados
+- **Repository** → acessa dados
+- **Service** → lógica de negócio + exposição SOAP
+- **Publisher** → inicialização do servidor
+
+### 2. Soft Delete
+Produtos nunca são removidos fisicamente. O campo `ativo = false`
+desativa o produto, preservando histórico de pedidos e integridade
+referencial. Padrão obrigatório em sistemas enterprise.
+
+### 3. Response objects dedicados
+`ProdutoResponse` e `ProdutoListResponse` encapsulam sempre:
+- `sucesso` (boolean): indica se a operação deu certo
+- `mensagem` (String): descrição do resultado
+- `produto` / `produtos`: dados retornados
+
+Isso permite evoluir o contrato sem quebrar clientes existentes.
+
+### 4. Validações na camada de serviço
+Todas as regras de negócio (preço > 0, nome obrigatório, etc.)
+são validadas antes de tocar o repositório.
+
+### 5. Dados iniciais via bloco static
+O repositório popula dados de teste automaticamente ao carregar,
+facilitando desenvolvimento e demonstrações.
+
+### 6. Namespace explícito no @WebService
+```java
+@WebService(targetNamespace = "http://service.soap.fiap.com.br/")
+```
+Definir namespace explícito garante estabilidade do WSDL entre
+versões e é essencial para integrações enterprise.
+
+---
+
+## Próximas features
+
+- [ ] **Integração com banco de dados** — JPA + Hibernate + Oracle
+- [ ] **Autenticação WS-Security** — UsernameToken ou certificado X.509
+- [ ] **HTTPS (WSS)** — comunicação criptografada entre sistemas
+- [ ] **Paginação** — listarProdutos com `pagina` e `tamanhoPagina`
+- [ ] **Busca por nome** — `buscarPorNome(String termo)`
+- [ ] **Log de auditoria** — registrar todas as operações realizadas
+- [ ] **Geração de stubs wsimport** — cliente tipado gerado pelo WSDL
+- [ ] **Deploy em container** — WildFly / WebSphere / JBoss EAP
+- [ ] **Testes unitários** — JUnit 5 para Service e Repository
+- [ ] **Versionamento de API** — `/produtos/v1` e `/produtos/v2`
+
+---
